@@ -11,7 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* --------------------- ENV ---------------------- */
+/* ---------------- ENV ---------------- */
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -24,7 +24,11 @@ const headers = {
 
 /* ---------------- SUPABASE HELPERS ---------------- */
 async function sbGet(table, query = "") {
-  return (await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, { headers })).json();
+  return (
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+      headers,
+    })
+  ).json();
 }
 async function sbPost(table, body) {
   return (
@@ -44,8 +48,14 @@ async function sbPatch(table, query, body) {
     })
   ).json();
 }
+async function sbDelete(table, query) {
+  return await fetch(`${SUPABASE_URL}/rest/v1/${table}${query}`, {
+    method: "DELETE",
+    headers,
+  });
+}
 
-/* -------------------- AUTH -------------------- */
+/* ---------------- AUTH MIDDLEWARE ---------------- */
 function token(id) {
   return jwt.sign({ id }, JWT_SECRET, { expiresIn: "7d" });
 }
@@ -63,7 +73,7 @@ function auth(req, res, next) {
   }
 }
 
-/* ------------------ ROLE CHECK ------------------- */
+/* ---------------- ROLE CHECK ---------------- */
 async function isAdmin(id) {
   const u = await sbGet("users", `?id=eq.${id}&select=role`);
   return u[0]?.role === "admin";
@@ -73,10 +83,10 @@ async function isOwner(id) {
   return u[0]?.role === "owner";
 }
 
-/* -------------------- ROOT --------------------- */
+/* ---------------- ROOT ---------------- */
 app.get("/", (req, res) => res.send("Brush Backend Running 🔥"));
 
-/* ---------------- SIGNUP ---------------- */
+/* ---------------- AUTH ---------------- */
 app.post("/auth/signup", async (req, res) => {
   const { name, email, password } = req.body;
 
@@ -89,14 +99,13 @@ app.post("/auth/signup", async (req, res) => {
     name,
     email,
     password: hashed,
-    role: "user", // default
+    role: "user",
     created_at: new Date().toISOString(),
   });
 
   res.json({ token: token(user[0].id), user: user[0] });
 });
 
-/* ---------------- LOGIN ---------------- */
 app.post("/auth/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -112,7 +121,6 @@ app.post("/auth/login", async (req, res) => {
   res.json({ token: token(user.id), user });
 });
 
-/* ---------------- PROFILE ---------------- */
 app.get("/auth/me", auth, async (req, res) => {
   const rows = await sbGet("users", `?id=eq.${req.userId}&select=*`);
   const user = rows[0];
@@ -120,11 +128,86 @@ app.get("/auth/me", auth, async (req, res) => {
   res.json(user);
 });
 
-/* -------------------------------------------------
-  ADMIN FEATURES
----------------------------------------------------*/
+/* ---------------- PRODUCTS ---------------- */
+app.post("/products/create", auth, async (req, res) => {
+  if (!(await isOwner(req.userId)))
+    return res.status(403).json({ error: "Owner only" });
 
-/* ----- GET ALL USERS ----- */
+  const product = await sbPost("products", {
+    name: req.body.name,
+    price: req.body.price,
+    description: req.body.description,
+    created_at: new Date().toISOString(),
+  });
+
+  res.json(product[0]);
+});
+
+app.get("/products", auth, async (req, res) => {
+  const list = await sbGet("products", "?select=*");
+  res.json(list);
+});
+
+app.get("/products/:id", auth, async (req, res) => {
+  const pr = await sbGet("products", `?id=eq.${req.params.id}&select=*`);
+  res.json(pr[0]);
+});
+
+app.patch("/products/:id", auth, async (req, res) => {
+  if (!(await isOwner(req.userId)))
+    return res.status(403).json({ error: "Owner only" });
+
+  const out = await sbPatch(
+    "products",
+    `?id=eq.${req.params.id}`,
+    req.body
+  );
+
+  res.json(out);
+});
+
+app.delete("/products/:id", auth, async (req, res) => {
+  if (!(await isOwner(req.userId)))
+    return res.status(403).json({ error: "Owner only" });
+
+  await sbDelete("products", `?id=eq.${req.params.id}`);
+  res.json({ deleted: true });
+});
+
+/* ---------------- LOGS ---------------- */
+app.post("/logs/add", auth, async (req, res) => {
+  const log = await sbPost("logs", {
+    user_id: req.userId,
+    action: req.body.action,
+    created_at: new Date().toISOString(),
+  });
+
+  res.json(log[0]);
+});
+
+app.get("/logs", auth, async (req, res) => {
+  const list = await sbGet("logs", "?select=*");
+  res.json(list);
+});
+
+/* ---------------- ROLES ---------------- */
+app.get("/roles", auth, async (req, res) => {
+  const r = await sbGet("roles", "?select=*");
+  res.json(r);
+});
+
+app.post("/roles/add", auth, async (req, res) => {
+  if (!(await isAdmin(req.userId)))
+    return res.status(403).json({ error: "Admin only" });
+
+  const role = await sbPost("roles", {
+    name: req.body.name,
+  });
+
+  res.json(role[0]);
+});
+
+/* ---------------- ADMIN ---------------- */
 app.get("/admin/users", auth, async (req, res) => {
   if (!(await isAdmin(req.userId)))
     return res.status(403).json({ error: "Admin only" });
@@ -133,35 +216,28 @@ app.get("/admin/users", auth, async (req, res) => {
   res.json(users);
 });
 
-/* ----- MAKE OWNER ----- */
 app.post("/admin/make-owner/:id", auth, async (req, res) => {
   if (!(await isAdmin(req.userId)))
     return res.status(403).json({ error: "Admin only" });
 
-  const out = await sbPatch(
-    "users",
-    `?id=eq.${req.params.id}`,
-    { role: "owner" }
-  );
+  const out = await sbPatch("users", `?id=eq.${req.params.id}`, {
+    role: "owner",
+  });
 
   res.json(out);
 });
 
-/* ----- REMOVE OWNER ----- */
 app.post("/admin/remove-owner/:id", auth, async (req, res) => {
   if (!(await isAdmin(req.userId)))
     return res.status(403).json({ error: "Admin only" });
 
-  const out = await sbPatch(
-    "users",
-    `?id=eq.${req.params.id}`,
-    { role: "user" }
-  );
+  const out = await sbPatch("users", `?id=eq.${req.params.id}`, {
+    role: "user",
+  });
 
   res.json(out);
 });
 
-/* ----- ADMIN PANEL STATS ----- */
 app.get("/admin/stats", auth, async (req, res) => {
   if (!(await isAdmin(req.userId)))
     return res.status(403).json({ error: "Admin only" });
@@ -175,6 +251,6 @@ app.get("/admin/stats", auth, async (req, res) => {
   });
 });
 
-/* ---------------- START SERVER ---------------- */
+/* ---------------- SERVER ---------------- */
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`🔥 Brush Backend Live on ${PORT}`));
