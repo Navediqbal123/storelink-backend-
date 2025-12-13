@@ -1,16 +1,14 @@
-// middleware/shopkeeper.js
-
-export default function shopkeeperOnly(req, res, next) {
+export default async function shopkeeperOnly(req, res, next) {
   try {
-    const user = req.user;
+    const userId = req.user.id;
 
-    // Check: logged in?
-    if (!user) {
-      return res.status(401).json({ error: "Login required" });
-    }
+    const { data, error } = await req.supabase
+      .from("shopkeepers")
+      .select("status")
+      .eq("user_id", userId)
+      .single();
 
-    // Check: role must be shopkeeper
-    if (user.role !== "shopkeeper") {
+    if (error || !data || data.status !== "approved") {
       return res.status(403).json({ error: "Access denied. Shopkeeper only." });
     }
 
