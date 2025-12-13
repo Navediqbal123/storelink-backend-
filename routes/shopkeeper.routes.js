@@ -1,10 +1,17 @@
 import express from "express";
+import authMiddleware from "../middleware/auth.js";
 import shopkeeperOnly from "../middleware/shopkeeper.js";
-import { becomeShopkeeper, shopkeeperDashboard } from "../controllers/shopkeeper.controller.js";
+import {
+  becomeShopkeeper,
+  shopkeeperDashboard,
+} from "../controllers/shopkeeper.controller.js";
 
 const router = express.Router();
 
-router.post("/become-shopkeeper", becomeShopkeeper);
-router.get("/dashboard", shopkeeperOnly, shopkeeperDashboard);
+// ✅ AUTH REQUIRED
+router.post("/become-shopkeeper", authMiddleware, becomeShopkeeper);
+
+// ✅ AUTH + SHOPKEEPER ONLY
+router.get("/dashboard", authMiddleware, shopkeeperOnly, shopkeeperDashboard);
 
 export default router;
