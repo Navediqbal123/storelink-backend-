@@ -6,7 +6,7 @@ export default async function auth(req, res, next) {
     return res.status(401).json({ error: "No token" });
   }
 
-  const token = authHeader.split(" ")[1];
+  const token = authHeader.replace("Bearer ", "");
 
   const { data, error } = await supabase.auth.getUser(token);
 
