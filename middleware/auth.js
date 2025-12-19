@@ -1,15 +1,26 @@
 import supabase from "../supabase.js";
 
 export default async function auth(req, res, next) {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  if (!token) return res.status(401).json({ error: "No token" });
+  try {
+    const authHeader = req.headers.authorization;
 
-  const { data, error } = await supabase.auth.getUser(token);
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "No token provided" });
+    }
 
-  if (error || !data.user) {
-    return res.status(401).json({ error: "Invalid token" });
+    const token = authHeader.replace("Bearer ", "").trim();
+
+    const { data, error } = await supabase.auth.getUser(token);
+
+    if (error || !data || !data.user) {
+      return res.status(401).json({ error: "Invalid token" });
+    }
+
+    // ✅ authenticated user
+    req.user = data.user;
+
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: "Auth failed" });
   }
-
-  req.user = data.user;
-  next();
 }
