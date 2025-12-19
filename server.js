@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createClient } from "@supabase/supabase-js";
+
+import supabase from "./supabase.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import shopkeeperRoutes from "./routes/shopkeeper.routes.js";
@@ -13,46 +14,55 @@ dotenv.config();
 
 const app = express();
 
-// --------------------
-// Middlewares
-// --------------------
+// ====================
+// Global Middlewares
+// ====================
 app.use(cors());
 app.use(express.json());
 
-// --------------------
-// Supabase Client
-// --------------------
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
-
-// Attach supabase to every request
+// ====================
+// Attach Supabase Client
+// ====================
 app.use((req, res, next) => {
   req.supabase = supabase;
   next();
 });
 
-// --------------------
-// Test Route
-// --------------------
+// ====================
+// Health / Test Route
+// ====================
 app.get("/", (req, res) => {
   res.send("Storelink Backend Running ✅");
 });
 
-// --------------------
-// Routes
-// --------------------
+// ====================
+// API Routes
+// ====================
 app.use("/auth", authRoutes);
 app.use("/shopkeeper", shopkeeperRoutes);
 app.use("/products", productRoutes);
 app.use("/analytics", analyticsRoutes);
 app.use("/admin", adminRoutes);
 
-// --------------------
+// ====================
+// 404 Handler (optional but good)
+// ====================
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+// ====================
+// Global Error Handler
+// ====================
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: "Internal server error" });
+});
+
+// ====================
 // Server Start
-// --------------------
+// ====================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server started on port ${PORT}`);
+  console.log(`🚀 Server started on port ${PORT}`);
 });
