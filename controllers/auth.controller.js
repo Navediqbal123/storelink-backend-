@@ -1,15 +1,30 @@
 import supabase from "../supabase.js";
-import jwt from "jsonwebtoken";
 
+// --------------------
+// SIGNUP
+// --------------------
 export const signup = async (req, res) => {
   const { email, password } = req.body;
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) return res.status(400).json({ error: error.message });
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
 
-  res.json({ success: true, user: data.user });
+  if (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  // IMPORTANT: session return karo
+  res.json({
+    session: data.session, // 👈 yahin access_token hota hai
+    user: data.user,
+  });
 };
 
+// --------------------
+// LOGIN
+// --------------------
 export const login = async (req, res) => {
   const { email, password } = req.body;
 
@@ -18,12 +33,15 @@ export const login = async (req, res) => {
     password,
   });
 
-  if (error) return res.status(401).json({ error: "Invalid credentials" });
+  if (error) {
+    return res.status(401).json({ error: error.message });
+  }
 
-  const token = jwt.sign(
-    { id: data.user.id },
-    process.env.JWT_SECRET
-  );
+  // ❌ jwt.sign HATA DIYA
+  // ✅ Supabase session return
 
-  res.json({ token, user: data.user });
+  res.json({
+    session: data.session, // 👈 FRONTEND YAHIN SE access_token LEGA
+    user: data.user,
+  });
 };
