@@ -6,6 +6,8 @@ import { createClient } from "@supabase/supabase-js";
 import authRoutes from "./routes/auth.routes.js";
 import shopkeeperRoutes from "./routes/shopkeeper.routes.js";
 import productRoutes from "./routes/product.routes.js";
+import analyticsRoutes from "./routes/analytics.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 dotenv.config();
 
@@ -18,7 +20,7 @@ app.use(cors());
 app.use(express.json());
 
 // --------------------
-// Supabase Client (MISSING THA)
+// Supabase Client
 // --------------------
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -44,6 +46,8 @@ app.get("/", (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/shopkeeper", shopkeeperRoutes);
 app.use("/products", productRoutes);
+app.use("/analytics", analyticsRoutes);
+app.use("/admin", adminRoutes);
 
 // --------------------
 // Server Start
