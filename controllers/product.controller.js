@@ -1,15 +1,24 @@
 import { randomUUID } from "crypto";
 
-// ===============================
-// ADD PRODUCT (shopkeeper only)
-// ===============================
+// =====================================
+// ADD PRODUCT (shopkeeper only + location)
+// =====================================
 export async function addProduct(req, res) {
   try {
-    const { title, description, price } = req.body;
+    const {
+      title,
+      description,
+      price,
+      city,
+      state,
+      country,
+      pincode,
+    } = req.body;
+
     const userId = req.user.id;
 
-    if (!title || !price) {
-      return res.status(400).json({ error: "Title and price required" });
+    if (!title || !price || !city || !state) {
+      return res.status(400).json({ error: "Required fields missing" });
     }
 
     const { error } = await req.supabase.from("products").insert([
@@ -19,6 +28,10 @@ export async function addProduct(req, res) {
         title,
         description,
         price,
+        city,
+        state,
+        country,
+        pincode,
       },
     ]);
 
@@ -30,15 +43,27 @@ export async function addProduct(req, res) {
   }
 }
 
-// ===============================
-// GET ALL PRODUCTS (public)
-// ===============================
+// =====================================
+// GET PRODUCTS (location-based ranking)
+// =====================================
 export async function getProducts(req, res) {
   try {
-    const { data, error } = await req.supabase
-      .from("products")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { city, state, country } = req.query;
+
+    let query = req.supabase.from("products").select("*");
+
+    // 🔥 LOCATION PRIORITY LOGIC
+    if (city) {
+      query = query.eq("city", city);
+    } else if (state) {
+      query = query.eq("state", state);
+    } else if (country) {
+      query = query.eq("country", country);
+    }
+
+    query = query.order("created_at", { ascending: false });
+
+    const { data, error } = await query;
 
     if (error) return res.status(400).json({ error });
 
@@ -48,17 +73,33 @@ export async function getProducts(req, res) {
   }
 }
 
-// ===============================
+// =====================================
 // UPDATE PRODUCT (own product only)
-// ===============================
+// =====================================
 export async function updateProduct(req, res) {
   try {
     const { id } = req.params;
-    const { title, price, description } = req.body;
+    const {
+      title,
+      description,
+      price,
+      city,
+      state,
+      country,
+      pincode,
+    } = req.body;
 
     const { error } = await req.supabase
       .from("products")
-      .update({ title, price, description })
+      .update({
+        title,
+        description,
+        price,
+        city,
+        state,
+        country,
+        pincode,
+      })
       .eq("id", id)
       .eq("user_id", req.user.id);
 
@@ -70,9 +111,9 @@ export async function updateProduct(req, res) {
   }
 }
 
-// ===============================
+// =====================================
 // DELETE PRODUCT (own product only)
-// ===============================
+// =====================================
 export async function deleteProduct(req, res) {
   try {
     const { id } = req.params;
@@ -89,4 +130,4 @@ export async function deleteProduct(req, res) {
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }
-}
+      }
