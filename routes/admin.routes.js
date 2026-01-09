@@ -8,6 +8,7 @@ import {
   getClickLogs,
   getSellerRequests,
   approveSeller,
+  rejectSeller,
   blockSeller,
   unblockSeller,
   getAllSellers,
@@ -24,11 +25,14 @@ router.get("/stats", auth, adminOnly, adminStats);
 // SELLER MANAGEMENT
 // ===============================
 
-// all seller requests (pending)
+// all seller requests (pending / approved / rejected)
 router.get("/seller-requests", auth, adminOnly, getSellerRequests);
 
 // approve seller
 router.post("/approve-seller", auth, adminOnly, approveSeller);
+
+// reject seller
+router.post("/reject-seller", auth, adminOnly, rejectSeller);
 
 // all approved sellers
 router.get("/sellers", auth, adminOnly, getAllSellers);
