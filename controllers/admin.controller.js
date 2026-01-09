@@ -62,21 +62,21 @@ export const approveSeller = async (req, res) => {
   try {
     const { user_id } = req.body;
 
-    // 1️⃣ approve request
+    // 1️⃣ Approve seller request
     await req.supabase
       .from("seller_requests")
       .update({ status: "approved" })
       .eq("user_id", user_id);
 
-    // 2️⃣ update role
+    // 2️⃣ Promote user to shopkeeper
     await req.supabase
       .from("user_roles")
       .update({ role: "shopkeeper" })
       .eq("user_id", user_id);
 
-    res.json({ success: true, message: "Seller approved" });
+    res.json({ success: true, message: "Seller approved successfully" });
   } catch {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Approval failed" });
   }
 };
 
@@ -117,7 +117,7 @@ export const unblockSeller = async (req, res) => {
 };
 
 // ===============================
-// GET ALL SELLERS (ADMIN)
+// GET ALL APPROVED SELLERS
 // ===============================
 export const getAllSellers = async (req, res) => {
   try {
@@ -134,7 +134,7 @@ export const getAllSellers = async (req, res) => {
 };
 
 // ===============================
-// GET SEARCH LOGS
+// GET SEARCH LOGS (ADMIN)
 // ===============================
 export const getSearchLogs = async (req, res) => {
   try {
@@ -151,7 +151,7 @@ export const getSearchLogs = async (req, res) => {
 };
 
 // ===============================
-// GET CLICK LOGS
+// GET CLICK LOGS (ADMIN)
 // ===============================
 export const getClickLogs = async (req, res) => {
   try {
