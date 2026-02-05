@@ -1,51 +1,14 @@
 // controllers/admin.controller.js
 
 // ===============================
-// ADMIN DASHBOARD STATS
-// ===============================
-export const adminStats = async (req, res) => {
-  try {
-    const users = await req.supabase
-      .from("profiles")
-      .select("id", { count: "exact" });
-
-    const sellers = await req.supabase
-      .from("user_roles")
-      .select("id", { count: "exact" })
-      .eq("role", "shopkeeper");
-
-    const products = await req.supabase
-      .from("products")
-      .select("id", { count: "exact" });
-
-    const searches = await req.supabase
-      .from("search_logs")
-      .select("id", { count: "exact" });
-
-    const clicks = await req.supabase
-      .from("click_logs")
-      .select("id", { count: "exact" });
-
-    res.json({
-      totalUsers: users.count,
-      totalSellers: sellers.count,
-      totalProducts: products.count,
-      totalSearches: searches.count,
-      totalClicks: clicks.count,
-    });
-  } catch {
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-// ===============================
-// SELLER REQUESTS (ALL)
+// SELLER REQUESTS (PENDING ONLY)
 // ===============================
 export const getSellerRequests = async (req, res) => {
   try {
     const { data, error } = await req.supabase
-      .from("seller_requests")
+      .from("sellers")
       .select("*")
+      .eq("status", "pending")
       .order("created_at", { ascending: false });
 
     if (error) return res.status(400).json({ error });
@@ -62,13 +25,13 @@ export const approveSeller = async (req, res) => {
   try {
     const { user_id } = req.body;
 
-    // approve request
+    // Update sellers table
     await req.supabase
-      .from("seller_requests")
+      .from("sellers")
       .update({ status: "approved" })
       .eq("user_id", user_id);
 
-    // promote to shopkeeper
+    // Promote role
     await req.supabase
       .from("user_roles")
       .update({ role: "shopkeeper" })
@@ -88,7 +51,7 @@ export const rejectSeller = async (req, res) => {
     const { user_id } = req.body;
 
     await req.supabase
-      .from("seller_requests")
+      .from("sellers")
       .update({ status: "rejected" })
       .eq("user_id", user_id);
 
@@ -99,84 +62,14 @@ export const rejectSeller = async (req, res) => {
 };
 
 // ===============================
-// BLOCK SELLER
-// ===============================
-export const blockSeller = async (req, res) => {
-  try {
-    const { user_id } = req.body;
-
-    await req.supabase
-      .from("profiles")
-      .update({ is_active: false })
-      .eq("user_id", user_id);
-
-    res.json({ success: true, message: "Seller blocked" });
-  } catch {
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-// ===============================
-// UNBLOCK SELLER
-// ===============================
-export const unblockSeller = async (req, res) => {
-  try {
-    const { user_id } = req.body;
-
-    await req.supabase
-      .from("profiles")
-      .update({ is_active: true })
-      .eq("user_id", user_id);
-
-    res.json({ success: true, message: "Seller unblocked" });
-  } catch {
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-// ===============================
 // GET APPROVED SELLERS
 // ===============================
 export const getAllSellers = async (req, res) => {
   try {
     const { data, error } = await req.supabase
-      .from("seller_requests")
+      .from("sellers")
       .select("*")
       .eq("status", "approved");
-
-    if (error) return res.status(400).json({ error });
-    res.json(data);
-  } catch {
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-// ===============================
-// SEARCH LOGS
-// ===============================
-export const getSearchLogs = async (req, res) => {
-  try {
-    const { data, error } = await req.supabase
-      .from("search_logs")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) return res.status(400).json({ error });
-    res.json(data);
-  } catch {
-    res.status(500).json({ error: "Server error" });
-  }
-};
-
-// ===============================
-// CLICK LOGS
-// ===============================
-export const getClickLogs = async (req, res) => {
-  try {
-    const { data, error } = await req.supabase
-      .from("click_logs")
-      .select("*")
-      .order("created_at", { ascending: false });
 
     if (error) return res.status(400).json({ error });
     res.json(data);
