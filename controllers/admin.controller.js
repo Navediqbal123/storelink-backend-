@@ -1,6 +1,34 @@
 // controllers/admin.controller.js
 
 // ===============================
+// ADMIN DASHBOARD STATS
+// ===============================
+export const adminStats = async (req, res) => {
+  try {
+    const { count: totalUsers } = await req.supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true });
+
+    const { count: totalSellers } = await req.supabase
+      .from("sellers")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "approved");
+
+    const { count: totalProducts } = await req.supabase
+      .from("products")
+      .select("*", { count: "exact", head: true });
+
+    res.json({
+      totalUsers: totalUsers || 0,
+      totalSellers: totalSellers || 0,
+      totalProducts: totalProducts || 0,
+    });
+  } catch {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ===============================
 // SELLER REQUESTS (PENDING ONLY)
 // ===============================
 export const getSellerRequests = async (req, res) => {
@@ -25,13 +53,11 @@ export const approveSeller = async (req, res) => {
   try {
     const { user_id } = req.body;
 
-    // Update sellers table
     await req.supabase
       .from("sellers")
       .update({ status: "approved" })
       .eq("user_id", user_id);
 
-    // Promote role
     await req.supabase
       .from("user_roles")
       .update({ role: "shopkeeper" })
