@@ -29,7 +29,7 @@ export const adminStats = async (req, res) => {
 };
 
 // ===============================
-// SELLER REQUESTS (PENDING ONLY)
+// SELLER REQUESTS (PENDING)
 // ===============================
 export const getSellerRequests = async (req, res) => {
   try {
@@ -53,11 +53,13 @@ export const approveSeller = async (req, res) => {
   try {
     const { user_id } = req.body;
 
+    // Update seller status
     await req.supabase
       .from("sellers")
       .update({ status: "approved" })
       .eq("user_id", user_id);
 
+    // Promote role
     await req.supabase
       .from("user_roles")
       .update({ role: "shopkeeper" })
@@ -101,5 +103,41 @@ export const getAllSellers = async (req, res) => {
     res.json(data);
   } catch {
     res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ===============================
+// BLOCK SELLER
+// ===============================
+export const blockSeller = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    await req.supabase
+      .from("profiles")
+      .update({ is_active: false })
+      .eq("id", user_id);
+
+    res.json({ success: true, message: "Seller blocked" });
+  } catch {
+    res.status(500).json({ error: "Block failed" });
+  }
+};
+
+// ===============================
+// UNBLOCK SELLER
+// ===============================
+export const unblockSeller = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    await req.supabase
+      .from("profiles")
+      .update({ is_active: true })
+      .eq("id", user_id);
+
+    res.json({ success: true, message: "Seller unblocked" });
+  } catch {
+    res.status(500).json({ error: "Unblock failed" });
   }
 };
