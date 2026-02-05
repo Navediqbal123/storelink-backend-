@@ -53,13 +53,11 @@ export const approveSeller = async (req, res) => {
   try {
     const { user_id } = req.body;
 
-    // Update seller status
     await req.supabase
       .from("sellers")
       .update({ status: "approved" })
       .eq("user_id", user_id);
 
-    // Promote role
     await req.supabase
       .from("user_roles")
       .update({ role: "shopkeeper" })
@@ -139,5 +137,39 @@ export const unblockSeller = async (req, res) => {
     res.json({ success: true, message: "Seller unblocked" });
   } catch {
     res.status(500).json({ error: "Unblock failed" });
+  }
+};
+
+// ===============================
+// SEARCH LOGS
+// ===============================
+export const getSearchLogs = async (req, res) => {
+  try {
+    const { data, error } = await req.supabase
+      .from("search_logs")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) return res.status(400).json({ error });
+    res.json(data);
+  } catch {
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+// ===============================
+// CLICK LOGS
+// ===============================
+export const getClickLogs = async (req, res) => {
+  try {
+    const { data, error } = await req.supabase
+      .from("click_logs")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) return res.status(400).json({ error });
+    res.json(data);
+  } catch {
+    res.status(500).json({ error: "Server error" });
   }
 };
